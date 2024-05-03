@@ -55,6 +55,6 @@ public class PixelmonListener {
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = false)
     public void onHatchEgg(EggHatchEvent event) {
         UUID playerId = event.getPokemon().getOwnerPlayerUUID();
-        dataManager.recordChange(new IDataManager.Key(playerId, Statistic.MADE_EGGS), 1);
+        dataManager.recordChange(new IDataManager.Key(playerId, Statistic.HATCHED_EGGS), 1);
     }
 }
