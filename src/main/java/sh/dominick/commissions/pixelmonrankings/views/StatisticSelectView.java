@@ -16,6 +16,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsConfig;
 import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsMod;
 import sh.dominick.commissions.pixelmonrankings.Statistic;
+import sh.dominick.commissions.pixelmonrankings.util.ItemStackUtil;
 import sh.dominick.commissions.pixelmonrankings.views.util.ActionHandler;
 import sh.dominick.commissions.pixelmonrankings.views.util.BypassPacketHandler;
 import sh.dominick.commissions.pixelmonrankings.views.util.SimpleDenyingPacketHandler;
@@ -45,11 +46,10 @@ public class StatisticSelectView extends Inventory implements ActionHandler {
             Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation("minecraft", config.itemMaterial().get()));
             ItemStack itemStack = new ItemStack(item);
 
-            itemStack.setHoverName(
-                    new StringTextComponent(config.itemDisplayName().get()).setStyle(Style.EMPTY.withColor(Color.fromLegacyFormat(TextFormatting.AQUA)))
-            );
-
+            itemStack.setHoverName(new StringTextComponent(config.itemDisplayName().get()).setStyle(Style.EMPTY.withColor(Color.fromLegacyFormat(TextFormatting.AQUA))));
             itemStack.setCount(config.itemAmount().get());
+
+            ItemStackUtil.writeLore(itemStack, config.itemLore().get());
 
             setItem(position, itemStack);
         }
