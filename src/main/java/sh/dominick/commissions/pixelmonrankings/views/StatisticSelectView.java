@@ -43,7 +43,7 @@ public class StatisticSelectView extends Inventory implements ActionHandler {
             int position = config.itemPosition().get();
             statisticPositions[position] = statistic;
 
-            Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation("minecraft", config.itemMaterial().get()));
+            Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(config.itemMaterial().get()));
             ItemStack itemStack = new ItemStack(item);
 
             itemStack.setHoverName(new StringTextComponent(config.itemDisplayName().get()).setStyle(Style.EMPTY.withColor(Color.fromLegacyFormat(TextFormatting.AQUA))));
