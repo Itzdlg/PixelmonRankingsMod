@@ -21,6 +21,7 @@ import net.minecraftforge.server.permission.PermissionAPI;
 import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsMod;
 import sh.dominick.commissions.pixelmonrankings.data.IDataManager;
 import sh.dominick.commissions.pixelmonrankings.data.facade.CachedDataManager;
+import sh.dominick.commissions.pixelmonrankings.util.ItemStackUtil;
 import sh.dominick.commissions.pixelmonrankings.util.PlayerHeadUtil;
 import sh.dominick.commissions.pixelmonrankings.util.TimeUtil;
 import sh.dominick.commissions.pixelmonrankings.views.PeriodSelectView;
@@ -31,6 +32,8 @@ import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.Supplier;
+
+import static sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsLang.wrap;
 
 public class RankingsCommand {
     private final PixelmonRankingsMod mod;
@@ -58,7 +61,7 @@ public class RankingsCommand {
                 .then(Commands.literal("this-month").executes((c) -> instance.executeRankings(c, monthStartSupplier.get(), monthEndSupplier.get())))
                 .then(Commands.literal("all-time").executes((c) -> instance.executeRankings(c, null, null)));
 
-        if (mod.config().devMode().get()) {
+        if (mod.config().devMode) {
             builder.then(Commands.literal("flood").executes(instance::executeFlood));
         }
 
@@ -66,11 +69,13 @@ public class RankingsCommand {
     }
 
     public int executeRankings(CommandContext<CommandSource> command) throws CommandSyntaxException {
-        ItemStack monthlyItem = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODc3MjFiZTM3ZjkzMzJhZDhiZTQzY2JkZjE1NmY0MzQ5MjY3ZWEyYzExMGZhZmVjMjM3NjhlNjhkODMwY2FmNiJ9fX0=", 1);
-        monthlyItem.setHoverName(new StringTextComponent("This Month").withStyle(Style.EMPTY.withColor(TextFormatting.YELLOW).withItalic(false)));
+        ItemStack monthlyItem = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), mod.lang().periodSelectView.thisMonthItem.head, 1);
+        monthlyItem.setHoverName(wrap(mod.lang().periodSelectView.thisMonthItem.name));
+        ItemStackUtil.writeLore(monthlyItem, wrap(mod.lang().periodSelectView.thisMonthItem.lore));
 
-        ItemStack allTimeItem = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmYyODNlNjExYTYzZWU4ZTJmNmYxZDJjZmNiN2U0YjVmM2I2N2E1YmE5NjQ4YzU2NGZlNGExZWE3NDFiY2FhMSJ9fX0=", 1);
-        allTimeItem.setHoverName(new StringTextComponent("All Time").withStyle(Style.EMPTY.withColor(TextFormatting.YELLOW).withItalic(false)));
+        ItemStack allTimeItem = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), mod.lang().periodSelectView.allTimeItem.head, 1);
+        allTimeItem.setHoverName(wrap(mod.lang().periodSelectView.allTimeItem.name));
+        ItemStackUtil.writeLore(allTimeItem, wrap(mod.lang().periodSelectView.allTimeItem.lore));
 
         Set<PeriodSelectView.Period> periods = new HashSet<>(Arrays.asList(
                 new PeriodSelectView.Period(monthStartSupplier.get(), monthEndSupplier.get(), monthlyItem, 3),
@@ -79,9 +84,7 @@ public class RankingsCommand {
 
         ServerPlayerEntity player = command.getSource().getPlayerOrException();
         PeriodSelectView.open(mod, player, periods).onSelect((period) -> {
-            player.closeContainer();
             StatisticSelectView.open(mod, player).onSelect((statistic) -> {
-                player.closeContainer();
                 RankedStatisticsView.open(mod, player, statistic, period.start(), period.end());
             });
         });
@@ -92,7 +95,6 @@ public class RankingsCommand {
     public int executeRankings(CommandContext<CommandSource> command, @Nullable Instant start, @Nullable Instant end) throws CommandSyntaxException {
         ServerPlayerEntity player = command.getSource().getPlayerOrException();
         StatisticSelectView.open(mod, player).onSelect((statistic) -> {
-            player.closeContainer();
             RankedStatisticsView.open(mod, player, statistic, start, end);
         });
 

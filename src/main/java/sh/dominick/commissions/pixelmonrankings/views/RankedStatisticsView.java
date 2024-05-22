@@ -2,6 +2,7 @@ package sh.dominick.commissions.pixelmonrankings.views;
 
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.container.ChestContainer;
@@ -20,6 +21,7 @@ import sh.dominick.commissions.pixelmonrankings.data.IDataManager;
 import sh.dominick.commissions.pixelmonrankings.util.ItemStackUtil;
 import sh.dominick.commissions.pixelmonrankings.util.PlayerHeadUtil;
 import sh.dominick.commissions.pixelmonrankings.views.util.ActionHandler;
+import sh.dominick.commissions.pixelmonrankings.support.arclight.ArcLightSupport;
 import sh.dominick.commissions.pixelmonrankings.views.util.BypassPacketHandler;
 import sh.dominick.commissions.pixelmonrankings.views.util.SimpleDenyingPacketHandler;
 
@@ -27,6 +29,8 @@ import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+
+import static sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsLang.wrap;
 
 public class RankedStatisticsView extends Inventory implements ActionHandler {
     private static final int PAGE_SIZE = 9 * 3;
@@ -101,12 +105,14 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
 
         String selfValue = statistic.value(dataManager.aggregate(dataKey, from, to));
 
-        selfHead.setHoverName(new StringTextComponent("You").withStyle(Style.EMPTY.withColor(TextFormatting.YELLOW).withItalic(false)));
+        selfHead.setHoverName(wrap(mod.lang().rankedStatisticView.youEntryItem.name));
 
-        ItemStackUtil.writeLore(selfHead,
-                new StringTextComponent(""),
-                new StringTextComponent("Ranked ").withStyle(TextFormatting.GRAY).append(new StringTextComponent("" + selfRanking).withStyle(TextFormatting.GOLD).append(new StringTextComponent(" of " + recordsTotal).withStyle(TextFormatting.GRAY))),
-                new StringTextComponent("with ").withStyle(TextFormatting.GRAY).append(new StringTextComponent(selfValue).withStyle(TextFormatting.WHITE)));
+        ItemStackUtil.writeLore(selfHead, wrap(
+                mod.lang().rankedStatisticView.youEntryItem.lore,
+                Placeholder.unparsed("position", selfRanking + ""),
+                Placeholder.unparsed("total", recordsTotal + ""),
+                Placeholder.unparsed("value", selfValue)
+        ));
 
         setItem(SLOT_SELF, selfHead);
 
@@ -137,14 +143,18 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
                     1
             );
 
-            head.setHoverName(new StringTextComponent(gameProfile.playerName()).withStyle(Style.EMPTY.withColor(TextFormatting.YELLOW).withItalic(false)));
+            head.setHoverName(wrap(mod.lang().rankedStatisticView.entryItem.name,
+                    Placeholder.unparsed("player_name", gameProfile.playerName()))
+            );
 
             String value = statistic.value(record.value());
 
-            ItemStackUtil.writeLore(head,
-                    new StringTextComponent(""),
-                    new StringTextComponent("Ranked ").withStyle(TextFormatting.GRAY).append(new StringTextComponent("" + (i + 1)).withStyle(TextFormatting.GOLD).append(new StringTextComponent(" of " + recordsTotal).withStyle(TextFormatting.GRAY))),
-                    new StringTextComponent("with ").withStyle(TextFormatting.GRAY).append(new StringTextComponent(value).withStyle(TextFormatting.WHITE)));
+            ItemStackUtil.writeLore(head, wrap(
+                    mod.lang().rankedStatisticView.entryItem.lore,
+                    Placeholder.unparsed("position", (i + 1) + ""),
+                    Placeholder.unparsed("total", recordsTotal + ""),
+                    Placeholder.unparsed("value", value)
+            ));
 
             setItem(slot, head);
         }
@@ -154,13 +164,17 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
         ItemStack barrierItem = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
         barrierItem.setHoverName(new StringTextComponent(""));
 
-        ItemStack backwardHead = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjBjZmI0ZjM3Y2NlZmQwNTg5YzU1NzhiNTQxZTdhZjkyM2UzZTY0MjBhZGE2YmU0NDNkZmFkY2IwNWJhZTE5NCJ9fX0=", 1);
-        backwardHead.setHoverName(new StringTextComponent("Go Backwards").withStyle(TextFormatting.YELLOW));
+        ItemStack backwardHead = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), mod.lang().rankedStatisticView.backwardsItem.head, 1);
+        backwardHead.setHoverName(wrap(mod.lang().rankedStatisticView.backwardsItem.name));
+        ItemStackUtil.writeLore(backwardHead, wrap(mod.lang().rankedStatisticView.backwardsItem.lore));
+
         if (page - 1 >= 0) setItem(SLOT_PAGE_BACKWARD, backwardHead);
         else setItem(SLOT_PAGE_BACKWARD, barrierItem.copy());
 
-        ItemStack forwardHead = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjM5NTExOWRkNTIwMWEyNDJiODZiNDg2NmQ2ZjA0NTQxYjAwYjkyZWJkZDU3Y2UyNzkxOWZiNWYxMDJhNmRkZCJ9fX0=", 1);
-        forwardHead.setHoverName(new StringTextComponent("Go Forwards").withStyle(TextFormatting.YELLOW));
+        ItemStack forwardHead = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), mod.lang().rankedStatisticView.forwardsItem.head, 1);
+        forwardHead.setHoverName(wrap(mod.lang().rankedStatisticView.forwardsItem.name));
+        ItemStackUtil.writeLore(forwardHead, wrap(mod.lang().rankedStatisticView.forwardsItem.lore));
+
         if (page + 1 <= maxPage) setItem(SLOT_PAGE_FORWARD, forwardHead);
         else setItem(SLOT_PAGE_FORWARD, barrierItem.copy());
     }
@@ -206,27 +220,33 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
         if (dataManager.getGameProfile(player) != null)
             playerName = dataManager.getGameProfile(player).playerName();
 
-        self.closeContainer();
-        PlayerStatisticsView.open(mod, self, player, playerName, from, to).onBack(() -> {
+        String finalPlayerName = playerName;
+
+        ArcLightSupport.sync(() -> {
             self.closeContainer();
-            RankedStatisticsView.open(mod, self, statistic, from, to).atPage(page);
+            PlayerStatisticsView.open(mod, self, player, finalPlayerName, from, to).onBack(() -> {
+                self.closeContainer();
+                RankedStatisticsView.open(mod, self, statistic, from, to).atPage(page);
+            });
         });
     }
 
     public static RankedStatisticsView open(PixelmonRankingsMod mod, ServerPlayerEntity player, Statistic statistic, @Nullable Instant from, @Nullable Instant to) {
         RankedStatisticsView inventory = new RankedStatisticsView(mod, player, statistic, from, to);
 
-        player.closeContainer();
-
         NetworkManager connection = player.connection.connection;
         ChannelPipeline pipeline = connection.channel().pipeline();
 
-        player.openMenu(new SimpleNamedContainerProvider((a1, a2, a3) -> {
-            ChestContainer container = new ChestContainer(ContainerType.GENERIC_9x5, a1, a2, inventory, 5);
-            inventory.packetHandler = new SimpleDenyingPacketHandler(player, inventory, container.containerId, 0, 45 - 1);
+        ArcLightSupport.sync(() -> {
+            player.closeContainer();
 
-            return container;
-        }, new StringTextComponent(statistic.displayName()).withStyle(TextFormatting.BLUE)));
+            player.openMenu(new SimpleNamedContainerProvider((a1, a2, a3) -> {
+                ChestContainer container = new ChestContainer(ContainerType.GENERIC_9x5, a1, a2, inventory, 5);
+                inventory.packetHandler = new SimpleDenyingPacketHandler(player, inventory, container.containerId, 0, 45 - 1);
+
+                return container;
+            }, wrap(mod.lang().rankedStatisticView.title, Placeholder.unparsed("statistic_name", mod.lang().statistic(statistic).displayName))));
+        });
 
         try {
             pipeline.remove(PixelmonRankingsMod.MOD_ID + "/inventory_handler");

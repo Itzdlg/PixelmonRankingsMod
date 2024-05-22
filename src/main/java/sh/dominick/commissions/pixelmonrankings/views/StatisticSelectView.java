@@ -13,16 +13,20 @@ import net.minecraft.network.IPacket;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.*;
 import net.minecraftforge.registries.ForgeRegistries;
-import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsConfig;
+import sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsConfig;
 import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsMod;
 import sh.dominick.commissions.pixelmonrankings.Statistic;
+import sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsLang;
 import sh.dominick.commissions.pixelmonrankings.util.ItemStackUtil;
 import sh.dominick.commissions.pixelmonrankings.views.util.ActionHandler;
+import sh.dominick.commissions.pixelmonrankings.support.arclight.ArcLightSupport;
 import sh.dominick.commissions.pixelmonrankings.views.util.BypassPacketHandler;
 import sh.dominick.commissions.pixelmonrankings.views.util.SimpleDenyingPacketHandler;
 
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
+
+import static sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsLang.wrap;
 
 public class StatisticSelectView extends Inventory implements ActionHandler {
     public static final ITextComponent TITLE = new StringTextComponent("Select a Statistic").setStyle(
@@ -34,22 +38,22 @@ public class StatisticSelectView extends Inventory implements ActionHandler {
     private Statistic[] statisticPositions = new Statistic[64];
     private Consumer<Statistic> onSelect = (it) -> {};
 
-    private StatisticSelectView(PixelmonRankingsConfig pluginConfig) {
+    private StatisticSelectView(PixelmonRankingsMod mod) {
         super(9);
 
         for (Statistic statistic : Statistic.values()) {
-            PixelmonRankingsConfig.StatisticConfig config = pluginConfig.statistic(statistic);
+            PixelmonRankingsLang.StatisticConfig config = mod.lang().statistic(statistic);
 
-            int position = config.itemPosition().get();
+            int position = config.item.position;
             statisticPositions[position] = statistic;
 
-            Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(config.itemMaterial().get()));
+            Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(config.item.material));
             ItemStack itemStack = new ItemStack(item);
 
-            itemStack.setHoverName(new StringTextComponent(config.itemDisplayName().get()).setStyle(Style.EMPTY.withColor(Color.fromLegacyFormat(TextFormatting.AQUA))));
-            itemStack.setCount(config.itemAmount().get());
+            itemStack.setHoverName(wrap(config.item.displayName));
+            itemStack.setCount(config.item.amount);
 
-            ItemStackUtil.writeLore(itemStack, config.itemLore().get());
+            ItemStackUtil.writeLore(itemStack, wrap(config.item.lore));
 
             setItem(position, itemStack);
         }
@@ -68,15 +72,17 @@ public class StatisticSelectView extends Inventory implements ActionHandler {
     }
 
     public static StatisticSelectView open(PixelmonRankingsMod mod, ServerPlayerEntity player) {
-        StatisticSelectView inventory = new StatisticSelectView(mod.config());
+        StatisticSelectView inventory = new StatisticSelectView(mod);
 
-        player.closeContainer();
+        ArcLightSupport.sync(() -> {
+            player.closeContainer();
 
-        player.openMenu(new SimpleNamedContainerProvider((a1, a2, a3) -> {
-            ChestContainer container = new ChestContainer(ContainerType.GENERIC_9x1, a1, a2, inventory, 1);
-            inventory.packetHandler = new SimpleDenyingPacketHandler(player, inventory, container.containerId, 0, 9 - 1);
-            return container;
-        }, TITLE));
+            player.openMenu(new SimpleNamedContainerProvider((a1, a2, a3) -> {
+                ChestContainer container = new ChestContainer(ContainerType.GENERIC_9x1, a1, a2, inventory, 1);
+                inventory.packetHandler = new SimpleDenyingPacketHandler(player, inventory, container.containerId, 0, 9 - 1);
+                return container;
+            }, wrap(mod.lang().statisticSelectView.title)));
+        });
 
         ChannelPipeline pipeline = player.connection.connection.channel().pipeline();
 

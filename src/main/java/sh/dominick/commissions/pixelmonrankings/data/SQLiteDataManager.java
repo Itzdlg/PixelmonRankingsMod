@@ -1,6 +1,5 @@
 package sh.dominick.commissions.pixelmonrankings.data;
 
-import com.mojang.authlib.GameProfile;
 import sh.dominick.commissions.pixelmonrankings.Statistic;
 
 import javax.annotation.Nullable;
@@ -56,6 +55,9 @@ public class SQLiteDataManager implements IDataManager {
     }
 
     private void setPlayer(PreparedStatement stmt, int index, UUID player) throws SQLException {
+        if (player == null)
+            return;
+
         ByteBuffer bb = ByteBuffer.allocate(16);
         bb.putLong(player.getMostSignificantBits());
         bb.putLong(player.getLeastSignificantBits());
@@ -66,6 +68,9 @@ public class SQLiteDataManager implements IDataManager {
 
     private UUID getPlayer(ResultSet rs, String column) throws SQLException {
         byte[] ba = rs.getBytes(column);
+
+        if (ba == null)
+            return null;
 
         ByteBuffer bb = ByteBuffer.wrap(ba);
         long firstLong = bb.getLong();
@@ -257,7 +262,7 @@ public class SQLiteDataManager implements IDataManager {
     @Override
     public void compact(@Nullable Instant from, @Nullable Instant to) {
         String sql = "SELECT player, statistic, SUM(change) AS total_change " +
-                "FROM " + changesTableName + " WHERE TRUE";
+                "FROM " + changesTableName + " WHERE 1";
 
         if (from != null)
             sql += " AND timestamp >= " + from.toEpochMilli();
@@ -274,7 +279,7 @@ public class SQLiteDataManager implements IDataManager {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
+                while (rs.next()) {
                     UUID player = getPlayer(rs, "player");
                     Statistic statistic = Statistic.ofStorageId(rs.getByte("statistic"));
                     double totalChange = rs.getDouble("total_change");
@@ -304,7 +309,7 @@ public class SQLiteDataManager implements IDataManager {
                 deleteStmt.executeUpdate();
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
         }
     }
 }

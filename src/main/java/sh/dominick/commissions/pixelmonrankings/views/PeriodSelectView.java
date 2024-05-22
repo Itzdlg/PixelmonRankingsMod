@@ -7,16 +7,12 @@ import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.container.ChestContainer;
 import net.minecraft.inventory.container.ContainerType;
 import net.minecraft.inventory.container.SimpleNamedContainerProvider;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.IPacket;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.*;
-import net.minecraftforge.registries.ForgeRegistries;
-import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsConfig;
 import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsMod;
-import sh.dominick.commissions.pixelmonrankings.Statistic;
 import sh.dominick.commissions.pixelmonrankings.views.util.ActionHandler;
+import sh.dominick.commissions.pixelmonrankings.support.arclight.ArcLightSupport;
 import sh.dominick.commissions.pixelmonrankings.views.util.BypassPacketHandler;
 import sh.dominick.commissions.pixelmonrankings.views.util.SimpleDenyingPacketHandler;
 
@@ -25,6 +21,8 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+
+import static sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsLang.wrap;
 
 public class PeriodSelectView extends Inventory implements ActionHandler {
     public static class Period {
@@ -47,10 +45,6 @@ public class PeriodSelectView extends Inventory implements ActionHandler {
             return end;
         }
     }
-
-    public static final ITextComponent TITLE = new StringTextComponent("Select a Period").setStyle(
-            Style.EMPTY.withColor(TextFormatting.BLUE)
-    );
 
     private SimpleChannelInboundHandler<IPacket<?>> packetHandler = new BypassPacketHandler();
     private Consumer<Period> onSelect = (it) -> {};
@@ -88,13 +82,15 @@ public class PeriodSelectView extends Inventory implements ActionHandler {
     public static PeriodSelectView open(PixelmonRankingsMod mod, ServerPlayerEntity player, Set<Period> periods) {
         PeriodSelectView inventory = new PeriodSelectView(periods);
 
-        player.closeContainer();
+        ArcLightSupport.sync(() -> {
+            player.closeContainer();
 
-        player.openMenu(new SimpleNamedContainerProvider((a1, a2, a3) -> {
-            ChestContainer container = new ChestContainer(ContainerType.GENERIC_9x1, a1, a2, inventory, 1);
-            inventory.packetHandler = new SimpleDenyingPacketHandler(player, inventory, container.containerId, 0, 9 - 1);
-            return container;
-        }, TITLE));
+            player.openMenu(new SimpleNamedContainerProvider((a1, a2, a3) -> {
+                ChestContainer container = new ChestContainer(ContainerType.GENERIC_9x1, a1, a2, inventory, 1);
+                inventory.packetHandler = new SimpleDenyingPacketHandler(player, inventory, container.containerId, 0, 9 - 1);
+                return container;
+            }, wrap(mod.lang().periodSelectView.title)));
+        });
 
         ChannelPipeline pipeline = player.connection.connection.channel().pipeline();
 

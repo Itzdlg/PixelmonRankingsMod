@@ -11,6 +11,9 @@ public class TimeUtil {
         long hours = (seconds % (24 * 3600)) / 3600;
         long minutes = (seconds % 3600) / 60;
 
+        if (days == 0 && hours == 0 && minutes == 0)
+            return seconds + "s";
+
         StringBuilder formattedTime = new StringBuilder();
 
         if (days > 0) {
