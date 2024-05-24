@@ -244,15 +244,16 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
                 ChestContainer container = new ChestContainer(ContainerType.GENERIC_9x5, a1, a2, inventory, 5);
                 inventory.packetHandler = new SimpleDenyingPacketHandler(player, inventory, container.containerId, 0, 45 - 1);
 
+                try {
+                    pipeline.remove(PixelmonRankingsMod.MOD_ID + "/inventory_handler");
+                } catch (NoSuchElementException ex) { }
+
+                pipeline.addBefore("packet_handler", PixelmonRankingsMod.MOD_ID + "/inventory_handler", inventory.packetHandler);
+
                 return container;
             }, wrap(mod.lang().rankedStatisticView.title, Placeholder.unparsed("statistic_name", mod.lang().statistic(statistic).displayName))));
+
         });
-
-        try {
-            pipeline.remove(PixelmonRankingsMod.MOD_ID + "/inventory_handler");
-        } catch (NoSuchElementException ex) { }
-
-        pipeline.addBefore("packet_handler", PixelmonRankingsMod.MOD_ID + "/inventory_handler", inventory.packetHandler);
 
         return inventory;
     }

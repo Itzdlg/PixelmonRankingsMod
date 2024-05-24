@@ -88,17 +88,18 @@ public class PeriodSelectView extends Inventory implements ActionHandler {
             player.openMenu(new SimpleNamedContainerProvider((a1, a2, a3) -> {
                 ChestContainer container = new ChestContainer(ContainerType.GENERIC_9x1, a1, a2, inventory, 1);
                 inventory.packetHandler = new SimpleDenyingPacketHandler(player, inventory, container.containerId, 0, 9 - 1);
+
+                ChannelPipeline pipeline = player.connection.connection.channel().pipeline();
+
+                try {
+                    pipeline.remove(PixelmonRankingsMod.MOD_ID + "/inventory_handler");
+                } catch (NoSuchElementException ex) { }
+
+                pipeline.addBefore("packet_handler", PixelmonRankingsMod.MOD_ID + "/inventory_handler", inventory.packetHandler);
+
                 return container;
             }, wrap(mod.lang().periodSelectView.title)));
         });
-
-        ChannelPipeline pipeline = player.connection.connection.channel().pipeline();
-
-        try {
-            pipeline.remove(PixelmonRankingsMod.MOD_ID + "/inventory_handler");
-        } catch (NoSuchElementException ex) { }
-
-        pipeline.addBefore("packet_handler", PixelmonRankingsMod.MOD_ID + "/inventory_handler", inventory.packetHandler);
 
         return inventory;
     }

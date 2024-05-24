@@ -140,17 +140,18 @@ public class PlayerStatisticsView extends Inventory implements ActionHandler {
             player.openMenu(new SimpleNamedContainerProvider((a1, a2, a3) -> {
                 ChestContainer container = new ChestContainer(ContainerType.GENERIC_9x3, a1, a2, inventory, 3);
                 inventory.packetHandler = new SimpleDenyingPacketHandler(player, inventory, container.containerId, 0, 27 - 1);
+
+                ChannelPipeline pipeline = player.connection.connection.channel().pipeline();
+
+                try {
+                    pipeline.remove(PixelmonRankingsMod.MOD_ID + "/inventory_handler");
+                } catch (NoSuchElementException ex) { }
+
+                pipeline.addBefore("packet_handler", PixelmonRankingsMod.MOD_ID + "/inventory_handler", inventory.packetHandler);
+
                 return container;
             }, new StringTextComponent(targetName).withStyle(TextFormatting.BLUE)));
         });
-
-        ChannelPipeline pipeline = player.connection.connection.channel().pipeline();
-
-        try {
-            pipeline.remove(PixelmonRankingsMod.MOD_ID + "/inventory_handler");
-        } catch (NoSuchElementException ex) { }
-
-        pipeline.addBefore("packet_handler", PixelmonRankingsMod.MOD_ID + "/inventory_handler", inventory.packetHandler);
 
         return inventory;
     }
