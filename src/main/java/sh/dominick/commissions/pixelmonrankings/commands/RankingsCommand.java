@@ -2,22 +2,13 @@ package sh.dominick.commissions.pixelmonrankings.commands;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.ArgumentType;
-import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.Commands;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.Util;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.Style;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraftforge.server.permission.DefaultPermissionLevel;
-import net.minecraftforge.server.permission.PermissionAPI;
 import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsMod;
 import sh.dominick.commissions.pixelmonrankings.data.IDataManager;
 import sh.dominick.commissions.pixelmonrankings.data.facade.CachedDataManager;
@@ -30,8 +21,10 @@ import sh.dominick.commissions.pixelmonrankings.views.StatisticSelectView;
 
 import javax.annotation.Nullable;
 import java.time.Instant;
-import java.util.*;
-import java.util.function.Supplier;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 import static sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsLang.wrap;
 

@@ -23,7 +23,6 @@ import sh.dominick.commissions.pixelmonrankings.data.facade.CachedDataManager;
 import sh.dominick.commissions.pixelmonrankings.listeners.CacheListener;
 import sh.dominick.commissions.pixelmonrankings.listeners.PixelmonListener;
 import sh.dominick.commissions.pixelmonrankings.listeners.PlaytimeListener;
-import sh.dominick.commissions.pixelmonrankings.util.TimeUtil;
 
 import java.io.File;
 import java.nio.file.Path;

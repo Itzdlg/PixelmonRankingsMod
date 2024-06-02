@@ -13,14 +13,13 @@ import net.minecraft.item.Items;
 import net.minecraft.network.IPacket;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.util.text.StringTextComponent;
-import net.minecraftforge.common.MinecraftForge;
 import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsMod;
 import sh.dominick.commissions.pixelmonrankings.Statistic;
 import sh.dominick.commissions.pixelmonrankings.data.IDataManager;
+import sh.dominick.commissions.pixelmonrankings.support.arclight.ArcLightSupport;
 import sh.dominick.commissions.pixelmonrankings.util.ItemStackUtil;
 import sh.dominick.commissions.pixelmonrankings.util.PlayerHeadUtil;
 import sh.dominick.commissions.pixelmonrankings.views.util.ActionHandler;
-import sh.dominick.commissions.pixelmonrankings.support.arclight.ArcLightSupport;
 import sh.dominick.commissions.pixelmonrankings.views.util.BypassPacketHandler;
 import sh.dominick.commissions.pixelmonrankings.views.util.SimpleDenyingPacketHandler;
 
@@ -29,8 +28,6 @@ import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import static sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsLang.wrap;
 

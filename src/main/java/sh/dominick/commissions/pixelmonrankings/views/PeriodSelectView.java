@@ -9,10 +9,9 @@ import net.minecraft.inventory.container.ContainerType;
 import net.minecraft.inventory.container.SimpleNamedContainerProvider;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.IPacket;
-import net.minecraft.util.text.*;
 import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsMod;
-import sh.dominick.commissions.pixelmonrankings.views.util.ActionHandler;
 import sh.dominick.commissions.pixelmonrankings.support.arclight.ArcLightSupport;
+import sh.dominick.commissions.pixelmonrankings.views.util.ActionHandler;
 import sh.dominick.commissions.pixelmonrankings.views.util.BypassPacketHandler;
 import sh.dominick.commissions.pixelmonrankings.views.util.SimpleDenyingPacketHandler;
 
