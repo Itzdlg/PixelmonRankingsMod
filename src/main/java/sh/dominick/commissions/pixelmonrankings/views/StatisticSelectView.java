@@ -35,7 +35,7 @@ public class StatisticSelectView extends Inventory implements ActionHandler {
 
     private SimpleChannelInboundHandler<IPacket<?>> packetHandler = new BypassPacketHandler();
 
-    private Statistic[] statisticPositions = new Statistic[64];
+    private final Statistic[] statisticPositions = new Statistic[64];
     private Consumer<Statistic> onSelect = (it) -> {};
 
     private StatisticSelectView(PixelmonRankingsMod mod) {

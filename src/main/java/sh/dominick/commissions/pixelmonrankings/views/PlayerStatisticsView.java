@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsLang.wrap;
 
@@ -63,30 +64,32 @@ public class PlayerStatisticsView extends Inventory implements ActionHandler {
     }
 
     private void writeHeader() {
-        ItemStack head = PlayerHeadUtil.getPlayerHead(
-                player,
-                dataManager.getGameProfile(player).texture(),
-                1
-        );
+        dataManager.getGameProfile(player).thenAccept((gameProfile) -> {
+            ItemStack head = PlayerHeadUtil.getPlayerHead(
+                    player,
+                    gameProfile.texture(),
+                    1
+            );
 
-        head.setHoverName(wrap(mod.lang().playerStatisticsView.name,
-                Placeholder.unparsed("player_name", playerName)));
+            head.setHoverName(wrap(mod.lang().playerStatisticsView.name,
+                    Placeholder.unparsed("player_name", playerName)));
 
-        setItem(4, head);
+            setItem(4, head);
 
-        for (int i = 9; i < 18; i++) {
-            ItemStack barrierItem = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
-            barrierItem.setHoverName(new StringTextComponent(""));
+            for (int i = 9; i < 18; i++) {
+                ItemStack barrierItem = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
+                barrierItem.setHoverName(new StringTextComponent(""));
 
-            setItem(i, barrierItem);
-        }
+                setItem(i, barrierItem);
+            }
 
-        if (onBack != null) {
-            ItemStack backHead = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), mod.lang().playerStatisticsView.backwardsItem.head, 1);
-            backHead.setHoverName(wrap(mod.lang().playerStatisticsView.backwardsItem.name));
-            ItemStackUtil.writeLore(backHead, wrap(mod.lang().playerStatisticsView.backwardsItem.lore));
-            setItem(SLOT_BACK, backHead);
-        }
+            if (onBack != null) {
+                ItemStack backHead = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), mod.lang().playerStatisticsView.backwardsItem.head, 1);
+                backHead.setHoverName(wrap(mod.lang().playerStatisticsView.backwardsItem.name));
+                ItemStackUtil.writeLore(backHead, wrap(mod.lang().playerStatisticsView.backwardsItem.lore));
+                setItem(SLOT_BACK, backHead);
+            }
+        });
     }
 
     private void writeStatistics() {
@@ -103,18 +106,24 @@ public class PlayerStatisticsView extends Inventory implements ActionHandler {
 
             IDataManager.Key dataKey = new IDataManager.Key(player, statistic);
 
-            long recordsTotal = dataManager.count(statistic, from, to);
-            long ranking = dataManager.findPositionSorted(dataKey, from, to);
-            if (ranking == -1) ranking = recordsTotal;
+            CompletableFuture<Long> countFuture = dataManager.count(statistic, from, to);
+            CompletableFuture<Long> rankingFuture = dataManager.findPositionSorted(dataKey, from, to);
+            CompletableFuture<Double> aggregateFuture = dataManager.aggregate(dataKey, from, to);
 
-            String value = statistic.value(dataManager.aggregate(dataKey, from, to));
+            CompletableFuture.allOf(countFuture, rankingFuture, aggregateFuture).thenRun(() -> {
+                long recordsTotal = countFuture.join();
+                long ranking = rankingFuture.join();
+                if (ranking == -1) ranking = recordsTotal;
 
-            ItemStackUtil.writeLore(itemStack, wrap(mod.lang().playerStatisticsView.entryItem.lore,
-                    Placeholder.unparsed("position", ranking + ""),
-                    Placeholder.unparsed("total", recordsTotal + ""),
-                    Placeholder.unparsed("value", value)));
+                String value = statistic.value(aggregateFuture.join());
 
-            setItem(position, itemStack);
+                ItemStackUtil.writeLore(itemStack, wrap(mod.lang().playerStatisticsView.entryItem.lore,
+                        Placeholder.unparsed("position", ranking + ""),
+                        Placeholder.unparsed("total", recordsTotal + ""),
+                        Placeholder.unparsed("value", value)));
+
+                setItem(position, itemStack);
+            });
         }
     }
 

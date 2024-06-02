@@ -38,18 +38,6 @@ import static sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsLa
 public class RankingsCommand {
     private final PixelmonRankingsMod mod;
 
-    private static final Supplier<Instant> monthStartSupplier = () -> {
-        Calendar c = Calendar.getInstance();
-        c.set(Calendar.DAY_OF_MONTH, 1);
-        return c.toInstant();
-    };
-
-    private static final Supplier<Instant> monthEndSupplier = () -> {
-        Calendar c = Calendar.getInstance();
-        c.set(Calendar.DAY_OF_MONTH, c.get(Calendar.MONTH));
-        return c.toInstant();
-    };
-
     private RankingsCommand(PixelmonRankingsMod mod) {
         this.mod = mod;
     }
@@ -58,7 +46,7 @@ public class RankingsCommand {
         RankingsCommand instance = new RankingsCommand(mod);
 
         LiteralArgumentBuilder<CommandSource> builder = Commands.literal("rankings").executes(instance::executeRankings)
-                .then(Commands.literal("this-month").executes((c) -> instance.executeRankings(c, monthStartSupplier.get(), monthEndSupplier.get())))
+                .then(Commands.literal("this-month").executes((c) -> instance.executeRankings(c, TimeUtil.getStartOfMonth(), TimeUtil.getEndOfMonth())))
                 .then(Commands.literal("all-time").executes((c) -> instance.executeRankings(c, null, null)));
 
         if (mod.config().devMode) {
@@ -78,7 +66,7 @@ public class RankingsCommand {
         ItemStackUtil.writeLore(allTimeItem, wrap(mod.lang().periodSelectView.allTimeItem.lore));
 
         Set<PeriodSelectView.Period> periods = new HashSet<>(Arrays.asList(
-                new PeriodSelectView.Period(monthStartSupplier.get(), monthEndSupplier.get(), monthlyItem, 3),
+                new PeriodSelectView.Period(TimeUtil.getStartOfMonth(), TimeUtil.getEndOfMonth(), monthlyItem, 3),
                 new PeriodSelectView.Period(null, null, allTimeItem, 5)
         ));
 

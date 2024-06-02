@@ -1,5 +1,8 @@
 package sh.dominick.commissions.pixelmonrankings.util;
 
+import java.time.Instant;
+import java.util.Calendar;
+
 public class TimeUtil {
     private TimeUtil() {}
 
@@ -29,5 +32,17 @@ public class TimeUtil {
         }
 
         return formattedTime.toString();
+    }
+
+    public static Instant getStartOfMonth() {
+        Calendar c = Calendar.getInstance();
+        c.set(Calendar.DAY_OF_MONTH, 0);
+        return c.toInstant();
+    }
+
+    public static Instant getEndOfMonth() {
+        Calendar c = Calendar.getInstance();
+        c.set(Calendar.DAY_OF_MONTH, c.getActualMaximum(Calendar.DAY_OF_MONTH));
+        return c.toInstant();
     }
 }

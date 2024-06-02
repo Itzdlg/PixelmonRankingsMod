@@ -2,12 +2,15 @@ package sh.dominick.commissions.pixelmonrankings.data.facade;
 
 import sh.dominick.commissions.pixelmonrankings.Statistic;
 import sh.dominick.commissions.pixelmonrankings.data.IDataManager;
+import sh.dominick.commissions.pixelmonrankings.util.TimeUtil;
 
 import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 public class CachedDataManager implements IDataManager {
     protected final IDataManager reference;
@@ -41,8 +44,27 @@ public class CachedDataManager implements IDataManager {
     }
 
     @Override
-    public void recordChange(Key key, double value) {
-        reference.recordChange(key, value);
+    public CompletableFuture<Void> recordChange(Key key, double value) {
+        Double valueAllTime = aggregateCache.get(AggregateParams.key(key, null, null));
+        if (valueAllTime != null)
+            aggregateCache.put(AggregateParams.key(key, null, null), valueAllTime + value);
+
+        Double valueThisMonth = aggregateCache.get(AggregateParams.key(key, TimeUtil.getStartOfMonth(), TimeUtil.getEndOfMonth()));
+        if (valueThisMonth != null)
+            aggregateCache.put(AggregateParams.key(key, TimeUtil.getStartOfMonth(), TimeUtil.getEndOfMonth()), valueThisMonth + value);
+
+        return reference.recordChange(key, value);
+    }
+
+    private <K, V> CompletableFuture<V> cacheOrComplete(Map<K, V> cache, K cacheKey, Supplier<CompletableFuture<V>> supplier) {
+        V cacheValue = cache.get(cacheKey);
+        if (cacheValue != null)
+            return CompletableFuture.completedFuture(cacheValue);
+
+        return supplier.get().thenApply((v) -> {
+            cache.put(cacheKey, v);
+            return v;
+        });
     }
 
     protected static class AggregateParams {
@@ -63,13 +85,9 @@ public class CachedDataManager implements IDataManager {
     protected Map<String, Double> aggregateCache = new HashMap<>();
 
     @Override
-    public double aggregate(Key key, @Nullable Instant from, @Nullable Instant to) {
+    public CompletableFuture<Double> aggregate(Key key, @Nullable Instant from, @Nullable Instant to) {
         clearAllIfRefreshed();
-
-        return aggregateCache.computeIfAbsent(
-                AggregateParams.key(key, from, to),
-                k -> reference.aggregate(key, from, to)
-        );
+        return cacheOrComplete(aggregateCache, AggregateParams.key(key, from, to), () -> reference.aggregate(key, from, to));
     }
 
     protected static class SortParams {
@@ -90,12 +108,9 @@ public class CachedDataManager implements IDataManager {
     protected Map<String, Entry[]> sortCache = new HashMap<>();
 
     @Override
-    public Entry[] sort(Statistic statistic, @Nullable Instant from, @Nullable Instant to, int limit) {
+    public CompletableFuture<Entry[]> sort(Statistic statistic, @Nullable Instant from, @Nullable Instant to, int limit) {
         clearAllIfRefreshed();
-        return sortCache.computeIfAbsent(
-                SortParams.key(statistic, from, to, limit),
-                k -> reference.sort(statistic, from, to, limit)
-        );
+        return cacheOrComplete(sortCache, SortParams.key(statistic, from, to, limit), () -> reference.sort(statistic, from, to, limit));
     }
 
     protected static class FindPositionSortedParams {
@@ -107,13 +122,9 @@ public class CachedDataManager implements IDataManager {
     protected Map<String, Long> findPositionSortedCache = new HashMap<>();
 
     @Override
-    public long findPositionSorted(Key key, @Nullable Instant from, @Nullable Instant to) {
+    public CompletableFuture<Long> findPositionSorted(Key key, @Nullable Instant from, @Nullable Instant to) {
         clearAllIfRefreshed();
-
-        return findPositionSortedCache.computeIfAbsent(
-                FindPositionSortedParams.key(key, from, to),
-                k -> reference.findPositionSorted(key, from, to)
-        );
+        return cacheOrComplete(findPositionSortedCache, FindPositionSortedParams.key(key, from, to), () -> reference.findPositionSorted(key, from, to));
     }
 
     protected static class CountParams {
@@ -134,31 +145,27 @@ public class CachedDataManager implements IDataManager {
     protected Map<String, Long> countCache = new HashMap<>();
 
     @Override
-    public long count(Statistic statistic, @Nullable Instant from, @Nullable Instant to) {
+    public CompletableFuture<Long> count(Statistic statistic, @Nullable Instant from, @Nullable Instant to) {
         clearAllIfRefreshed();
-
-        return countCache.computeIfAbsent(
-                CountParams.key(statistic, from, to),
-                k -> reference.count(statistic, from, to)
-        );
+        return cacheOrComplete(countCache, CountParams.key(statistic, from, to), () -> reference.count(statistic, from, to));
     }
 
     @Override
-    public void recordGameProfile(UUID player, String playerName, String texture) {
+    public CompletableFuture<Void> recordGameProfile(UUID player, String playerName, String texture) {
         reference.recordGameProfile(player, playerName, texture);
+        return null;
     }
 
     protected final Map<UUID, CachedGameProfile> gameProfileCache = new HashMap<>();
 
     @Override
-    public CachedGameProfile getGameProfile(UUID player) {
+    public CompletableFuture<CachedGameProfile> getGameProfile(UUID player) {
         clearAllIfRefreshed();
-
-        return gameProfileCache.computeIfAbsent(player, k -> reference.getGameProfile(player));
+        return cacheOrComplete(gameProfileCache, player, () -> reference.getGameProfile(player));
     }
 
     @Override
-    public void compact(@Nullable Instant from, @Nullable Instant to) {
-        reference.compact(from, to);
+    public CompletableFuture<Void> compact(@Nullable Instant from, @Nullable Instant to) {
+        return reference.compact(from, to);
     }
 }

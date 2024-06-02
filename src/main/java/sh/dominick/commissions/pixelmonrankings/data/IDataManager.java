@@ -1,11 +1,11 @@
 package sh.dominick.commissions.pixelmonrankings.data;
 
-import com.mojang.authlib.GameProfile;
 import sh.dominick.commissions.pixelmonrankings.Statistic;
 
 import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public interface IDataManager {
     /**
@@ -62,7 +62,7 @@ public interface IDataManager {
      * @param key The player and statistic
      * @param value The (+/-) change
      */
-    void recordChange(Key key, double value);
+    CompletableFuture<Void> recordChange(Key key, double value);
 
     /**
      * Calculate the total change over the period
@@ -80,7 +80,7 @@ public interface IDataManager {
      * @return the aggregate value over the period for the provided
      * player and statistic
      */
-    double aggregate(Key key, @Nullable Instant from, @Nullable Instant to);
+    CompletableFuture<Double> aggregate(Key key, @Nullable Instant from, @Nullable Instant to);
 
     /**
      * Sorts players, by aggregate change, for the provided
@@ -96,7 +96,7 @@ public interface IDataManager {
      *
      * @return an array of Entry with num elements
      */
-    Entry[] sort(Statistic statistic, @Nullable Instant from, @Nullable Instant to, int limit);
+    CompletableFuture<Entry[]> sort(Statistic statistic, @Nullable Instant from, @Nullable Instant to, int limit);
 
     /**
      * Find the position a player would stand in a
@@ -107,7 +107,7 @@ public interface IDataManager {
      * @param to the ending period. null for the end of records
      * @return the position after sorting, 1-indexed. -1 if not found
      */
-    long findPositionSorted(Key key, @Nullable Instant from, @Nullable Instant to);
+    CompletableFuture<Long> findPositionSorted(Key key, @Nullable Instant from, @Nullable Instant to);
 
     /**
      * @param statistic the statistic
@@ -115,7 +115,7 @@ public interface IDataManager {
      * @param to the ending period. null for the end of records
      * @return the count of unique players for the provided statistic
      */
-    long count(Statistic statistic, @Nullable Instant from, @Nullable Instant to);
+    CompletableFuture<Long> count(Statistic statistic, @Nullable Instant from, @Nullable Instant to);
 
     class CachedGameProfile {
         private final UUID player;
@@ -149,12 +149,12 @@ public interface IDataManager {
      * @param playerName the player's username
      * @param texture the player's profile texture
      */
-    void recordGameProfile(UUID player, String playerName, String texture);
+    CompletableFuture<Void> recordGameProfile(UUID player, String playerName, String texture);
 
     /**
      * @return the player's cached GameProfile. null if not found
      */
-    CachedGameProfile getGameProfile(UUID player);
+    CompletableFuture<CachedGameProfile> getGameProfile(UUID player);
 
     /**
      * Takes all records between the timeframe and replaces
@@ -163,5 +163,5 @@ public interface IDataManager {
      * @param from the starting period. null for the beginning of records
      * @param to the ending period. null for the end of records
      */
-    void compact(@Nullable Instant from, @Nullable Instant to);
+    CompletableFuture<Void> compact(@Nullable Instant from, @Nullable Instant to);
 }

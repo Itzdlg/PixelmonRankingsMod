@@ -49,7 +49,7 @@ public class PeriodSelectView extends Inventory implements ActionHandler {
     private SimpleChannelInboundHandler<IPacket<?>> packetHandler = new BypassPacketHandler();
     private Consumer<Period> onSelect = (it) -> {};
 
-    private Set<Period> periods;
+    private final Set<Period> periods;
 
     private PeriodSelectView(Set<Period> periods) {
         super(9);

@@ -18,7 +18,7 @@ import java.util.Map;
 @ConfigSerializable
 public class PixelmonRankingsLang {
     @Setting
-    private Map<String, StatisticConfig> statistics = new HashMap<String, StatisticConfig>() {{
+    private final Map<String, StatisticConfig> statistics = new HashMap<String, StatisticConfig>() {{
         for (Statistic s : Statistic.values())
             put(s.name(), new StatisticConfig(s));
     }};
@@ -59,6 +59,8 @@ public class PixelmonRankingsLang {
         }
     }
 
+    @Setting public String unknownPlayerHead = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzhmM2Q3NjkxZDZkNWQ1NDZjM2NmMjIyNDNiM2U4MzA5YTEwNzAxMWYyZWU5Mzg0OGIxZThjNjU3NjgxYTU2ZCJ9fX0=";
+
     @Setting public PeriodSelectView periodSelectView = new PeriodSelectView();
     @ConfigSerializable
     public static class PeriodSelectView {
@@ -92,10 +94,14 @@ public class PixelmonRankingsLang {
         @ConfigSerializable
         public static class YouEntryItem {
             @Setting public String name = "<italic:false><yellow>You</yellow></italic>";
-            @Setting public String[] lore = {
+            @Setting public String[] loreRanked = {
                     "",
                     "<gray>Ranked <gold><position></gold> of <total></gray>",
                     "<gray>with <white><value></gray>"
+            };
+            @Setting public String[] loreUnranked = {
+                    "",
+                    "<gray>Unranked with <white><value></white></gray>"
             };
         }
 

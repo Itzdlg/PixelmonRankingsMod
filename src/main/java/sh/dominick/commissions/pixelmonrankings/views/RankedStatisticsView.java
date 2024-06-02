@@ -13,8 +13,7 @@ import net.minecraft.item.Items;
 import net.minecraft.network.IPacket;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.Style;
-import net.minecraft.util.text.TextFormatting;
+import net.minecraftforge.common.MinecraftForge;
 import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsMod;
 import sh.dominick.commissions.pixelmonrankings.Statistic;
 import sh.dominick.commissions.pixelmonrankings.data.IDataManager;
@@ -29,6 +28,9 @@ import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import static sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsLang.wrap;
 
@@ -49,10 +51,10 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
     private final Statistic statistic;
     private final Instant from, to;
 
-    private final IDataManager.Entry[] records;
-    private final long recordsTotal;
+    private long recordsTotal;
+    private IDataManager.Entry[] records;
 
-    private final int maxPage;
+    private int maxPage;
     private int page;
 
     private RankedStatisticsView(PixelmonRankingsMod mod, ServerPlayerEntity self, Statistic statistic, Instant from, Instant to) {
@@ -66,12 +68,22 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
         this.from = from;
         this.to = to;
 
-        this.recordsTotal = dataManager.count(statistic, from, to);
-        this.records = dataManager.sort(statistic, from, to, PAGE_SIZE * 5);
-
-        this.maxPage = (int) Math.ceil((double) this.records.length / PAGE_SIZE) - 1;
         this.page = 0;
+    }
 
+    public CompletableFuture<Void> performAsyncInit() {
+        CompletableFuture<Long> recordsTotalFuture = dataManager.count(statistic, from, to);
+        CompletableFuture<IDataManager.Entry[]> recordsFuture = dataManager.sort(statistic, from, to, mod.config().maxRanking);
+
+        return CompletableFuture.allOf(recordsTotalFuture, recordsFuture).thenRun(() -> {
+            this.recordsTotal = recordsTotalFuture.join();
+            this.records = recordsFuture.join();
+
+            this.maxPage = (int) Math.ceil((double) this.records.length / PAGE_SIZE) - 1;
+        });
+    }
+
+    public void performSyncPostInit() {
         writeHeader();
         writeCurrentPage();
         writePageControls();
@@ -92,36 +104,42 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
     }
 
     private void writeHeader() {
-        ItemStack selfHead = PlayerHeadUtil.getPlayerHead(
-                self.getUUID(),
-                dataManager.getGameProfile(self.getUUID()).texture(),
-                1
-        );
-
-        IDataManager.Key dataKey = new IDataManager.Key(self.getUUID(), statistic);
-
-        long selfRanking = dataManager.findPositionSorted(dataKey, from, to);
-        if (selfRanking == -1) selfRanking = recordsTotal;
-
-        String selfValue = statistic.value(dataManager.aggregate(dataKey, from, to));
-
-        selfHead.setHoverName(wrap(mod.lang().rankedStatisticView.youEntryItem.name));
-
-        ItemStackUtil.writeLore(selfHead, wrap(
-                mod.lang().rankedStatisticView.youEntryItem.lore,
-                Placeholder.unparsed("position", selfRanking + ""),
-                Placeholder.unparsed("total", recordsTotal + ""),
-                Placeholder.unparsed("value", selfValue)
-        ));
-
-        setItem(SLOT_SELF, selfHead);
-
         for (int i = 9; i < PAGE_START; i++) {
             ItemStack barrierItem = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
             barrierItem.setHoverName(new StringTextComponent(""));
 
             setItem(i, barrierItem);
         }
+
+        IDataManager.Key dataKey = new IDataManager.Key(self.getUUID(), statistic);
+
+        CompletableFuture<IDataManager.CachedGameProfile> gameProfileFuture = dataManager.getGameProfile(self.getUUID());
+        CompletableFuture<Long> positionSortedFuture = dataManager.findPositionSorted(dataKey, from, to);
+        CompletableFuture<Double> aggregateFuture = dataManager.aggregate(dataKey, from, to);
+
+        CompletableFuture.allOf(gameProfileFuture, positionSortedFuture, aggregateFuture).thenRun(() -> {
+            ItemStack selfHead = PlayerHeadUtil.getPlayerHead(
+                    self.getUUID(),
+                    gameProfileFuture.join().texture(),
+                    1
+            );
+
+            long selfRanking = positionSortedFuture.join();
+            String selfValue = statistic.value(aggregateFuture.join());
+
+            selfHead.setHoverName(wrap(mod.lang().rankedStatisticView.youEntryItem.name));
+
+            ItemStackUtil.writeLore(selfHead, wrap(
+                    selfRanking != -1 ?
+                            mod.lang().rankedStatisticView.youEntryItem.loreRanked
+                            : mod.lang().rankedStatisticView.youEntryItem.loreUnranked,
+                    Placeholder.unparsed("position", selfRanking + ""),
+                    Placeholder.unparsed("total", recordsTotal + ""),
+                    Placeholder.unparsed("value", selfValue)
+            ));
+
+            setItem(SLOT_SELF, selfHead);
+        });
     }
 
     private void writeCurrentPage() {
@@ -135,28 +153,30 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
             int slot = (i % PAGE_SIZE) + PAGE_START;
 
             IDataManager.Entry record = records[i];
-            IDataManager.CachedGameProfile gameProfile = dataManager.getGameProfile(record.key().player());
+            int finalI = i;
 
-            ItemStack head = PlayerHeadUtil.getPlayerHead(
-                    record.key().player(),
-                    gameProfile.texture(),
-                    1
-            );
+            dataManager.getGameProfile(record.key().player()).thenAccept((gameProfile) -> {
+                ItemStack head = PlayerHeadUtil.getPlayerHead(
+                        record.key().player(),
+                        gameProfile.texture(),
+                        1
+                );
 
-            head.setHoverName(wrap(mod.lang().rankedStatisticView.entryItem.name,
-                    Placeholder.unparsed("player_name", gameProfile.playerName()))
-            );
+                head.setHoverName(wrap(mod.lang().rankedStatisticView.entryItem.name,
+                        Placeholder.unparsed("player_name", gameProfile.playerName()))
+                );
 
-            String value = statistic.value(record.value());
+                String value = statistic.value(record.value());
 
-            ItemStackUtil.writeLore(head, wrap(
-                    mod.lang().rankedStatisticView.entryItem.lore,
-                    Placeholder.unparsed("position", (i + 1) + ""),
-                    Placeholder.unparsed("total", recordsTotal + ""),
-                    Placeholder.unparsed("value", value)
-            ));
+                ItemStackUtil.writeLore(head, wrap(
+                        mod.lang().rankedStatisticView.entryItem.lore,
+                        Placeholder.unparsed("position", (finalI + 1) + ""),
+                        Placeholder.unparsed("total", recordsTotal + ""),
+                        Placeholder.unparsed("value", value)
+                ));
 
-            setItem(slot, head);
+                setItem(slot, head);
+            });
         }
     }
 
@@ -218,41 +238,46 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
         UUID player = record.key().player();
         String playerName = player.toString();
         if (dataManager.getGameProfile(player) != null)
-            playerName = dataManager.getGameProfile(player).playerName();
+            playerName = dataManager.getGameProfile(player).join().playerName();
 
         String finalPlayerName = playerName;
 
         ArcLightSupport.sync(() -> {
             self.closeContainer();
             PlayerStatisticsView.open(mod, self, player, finalPlayerName, from, to).onBack(() -> {
-                self.closeContainer();
-                RankedStatisticsView.open(mod, self, statistic, from, to).atPage(page);
+                ArcLightSupport.sync(() -> {
+                    self.closeContainer();
+                    RankedStatisticsView.open(mod, self, statistic, from, to).atPage(page);
+                });
             });
         });
     }
 
     public static RankedStatisticsView open(PixelmonRankingsMod mod, ServerPlayerEntity player, Statistic statistic, @Nullable Instant from, @Nullable Instant to) {
         RankedStatisticsView inventory = new RankedStatisticsView(mod, player, statistic, from, to);
+        inventory.performAsyncInit().thenRun(() -> {
+            inventory.performSyncPostInit();
 
-        NetworkManager connection = player.connection.connection;
-        ChannelPipeline pipeline = connection.channel().pipeline();
+            NetworkManager connection = player.connection.connection;
+            ChannelPipeline pipeline = connection.channel().pipeline();
 
-        ArcLightSupport.sync(() -> {
-            player.closeContainer();
+            ArcLightSupport.sync(() -> {
+                player.closeContainer();
 
-            player.openMenu(new SimpleNamedContainerProvider((a1, a2, a3) -> {
-                ChestContainer container = new ChestContainer(ContainerType.GENERIC_9x5, a1, a2, inventory, 5);
-                inventory.packetHandler = new SimpleDenyingPacketHandler(player, inventory, container.containerId, 0, 45 - 1);
+                player.openMenu(new SimpleNamedContainerProvider((a1, a2, a3) -> {
+                    ChestContainer container = new ChestContainer(ContainerType.GENERIC_9x5, a1, a2, inventory, 5);
+                    inventory.packetHandler = new SimpleDenyingPacketHandler(player, inventory, container.containerId, 0, 45 - 1);
 
-                try {
-                    pipeline.remove(PixelmonRankingsMod.MOD_ID + "/inventory_handler");
-                } catch (NoSuchElementException ex) { }
+                    try {
+                        pipeline.remove(PixelmonRankingsMod.MOD_ID + "/inventory_handler");
+                    } catch (NoSuchElementException ex) { }
 
-                pipeline.addBefore("packet_handler", PixelmonRankingsMod.MOD_ID + "/inventory_handler", inventory.packetHandler);
+                    pipeline.addBefore("packet_handler", PixelmonRankingsMod.MOD_ID + "/inventory_handler", inventory.packetHandler);
 
-                return container;
-            }, wrap(mod.lang().rankedStatisticView.title, Placeholder.unparsed("statistic_name", mod.lang().statistic(statistic).displayName))));
+                    return container;
+                }, wrap(mod.lang().rankedStatisticView.title, Placeholder.unparsed("statistic_name", mod.lang().statistic(statistic).displayName))));
 
+            });
         });
 
         return inventory;

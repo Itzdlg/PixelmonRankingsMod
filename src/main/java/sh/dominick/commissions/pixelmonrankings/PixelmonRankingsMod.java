@@ -1,10 +1,10 @@
 package sh.dominick.commissions.pixelmonrankings;
 
+import com.pixelmonmod.pixelmon.Pixelmon;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.configurate.ConfigurateException;
@@ -23,45 +23,42 @@ import sh.dominick.commissions.pixelmonrankings.data.facade.CachedDataManager;
 import sh.dominick.commissions.pixelmonrankings.listeners.CacheListener;
 import sh.dominick.commissions.pixelmonrankings.listeners.PixelmonListener;
 import sh.dominick.commissions.pixelmonrankings.listeners.PlaytimeListener;
+import sh.dominick.commissions.pixelmonrankings.util.TimeUtil;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(PixelmonRankingsMod.MOD_ID)
 public class PixelmonRankingsMod {
+    public static final Executor EXECUTOR = Executors.newCachedThreadPool();
+
     public static final String MOD_ID = "pixelmonrankings";
 
     // Directly reference a log4j logger.
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private Path configPath, langPath;
-    private ConfigurationLoader<?> configLoader, langLoader;
-    private ConfigurationNode configNode, langNode;
-
-    private PixelmonRankingsConfig config = new PixelmonRankingsConfig();
-    private PixelmonRankingsLang langDefinition = new PixelmonRankingsLang();
+    private final PixelmonRankingsConfig config;
+    private final PixelmonRankingsLang langDefinition;
     private IDataManager dataManager;
 
     public PixelmonRankingsMod() {
         // Configurations
         try {
-            configPath = new File("./mods/PixelmonRankings/config.yml").toPath();
-            configLoader = createLoader(configPath);
-            configNode = configLoader.load();
+            Path configPath = new File("./config/PixelmonRankings/config.yml").toPath();
+            ConfigurationLoader<?> configLoader = createLoader(configPath);
+            ConfigurationNode configNode = configLoader.load();
             config = configNode.get(PixelmonRankingsConfig.class);
 
             configNode.set(PixelmonRankingsConfig.class, config);
             configLoader.save(configNode);
 
-            langPath = new File("./mods/PixelmonRankings/lang.yml").toPath();
-            langLoader = createLoader(langPath);
-            langNode = langLoader.load();
+            Path langPath = new File("./config/PixelmonRankings/lang.yml").toPath();
+            ConfigurationLoader<?> langLoader = createLoader(langPath);
+            ConfigurationNode langNode = langLoader.load();
             langDefinition = langNode.get(PixelmonRankingsLang.class);
 
             langNode.set(PixelmonRankingsLang.class, langDefinition);
@@ -76,19 +73,18 @@ public class PixelmonRankingsMod {
         dataManager = new SQLiteDataManager(config.database.url, "changes", "profiles");
 
         if (config.cache.enabled)
-            dataManager = new CachedDataManager(dataManager,
-                    config.cache.lifetime);
+            dataManager = new CachedDataManager(dataManager, config.cache.lifetime);
 
         // Register necessary event listeners
         MinecraftForge.EVENT_BUS.register(this);
-        MinecraftForge.EVENT_BUS.register(new CacheListener(dataManager));
+        MinecraftForge.EVENT_BUS.register(new CacheListener(this, dataManager));
 
         // Register listeners for each statistic
         MinecraftForge.EVENT_BUS.register(new PlaytimeListener(dataManager));
-        MinecraftForge.EVENT_BUS.register(new PixelmonListener(dataManager));
+        Pixelmon.EVENT_BUS.register(new PixelmonListener(dataManager));
 
-        if (config.database.compact) {
-            long timeAgo = 60L * 1000 * 60 * 60 * 24; // 60 days
+        if (config.database.compact.enabled) {
+            long timeAgo = (config.database.compact.daysUnprocessed) * 1000 * 60 * 60 * 24; // X days
             dataManager.compact(null, Instant.ofEpochMilli(System.currentTimeMillis() - timeAgo));
         }
     }

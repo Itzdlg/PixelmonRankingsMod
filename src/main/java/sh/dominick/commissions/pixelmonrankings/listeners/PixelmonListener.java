@@ -1,15 +1,20 @@
 package sh.dominick.commissions.pixelmonrankings.listeners;
 
+import com.pixelmonmod.pixelmon.api.battles.BattleResults;
 import com.pixelmonmod.pixelmon.api.daycare.event.DayCareEvent;
 import com.pixelmonmod.pixelmon.api.events.BeatWildPixelmonEvent;
 import com.pixelmonmod.pixelmon.api.events.CaptureEvent;
 import com.pixelmonmod.pixelmon.api.events.EggHatchEvent;
-import net.minecraft.inventory.EnderChestInventory;
+import com.pixelmonmod.pixelmon.api.events.battles.BattleEndEvent;
+import com.pixelmonmod.pixelmon.battles.controller.participants.BattleParticipant;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import sh.dominick.commissions.pixelmonrankings.Statistic;
 import sh.dominick.commissions.pixelmonrankings.data.IDataManager;
 
+import java.util.Map;
 import java.util.UUID;
 
 public class PixelmonListener {
@@ -26,7 +31,7 @@ public class PixelmonListener {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = false)
-    public void onPokemonCaptured(CaptureEvent event) {
+    public void onPokemonCaptured(CaptureEvent.SuccessfulCapture event) {
         UUID playerId = event.getPlayer().getUUID();
 
         boolean shiny = event.getPokemon().getPokemon().isShiny();
@@ -47,8 +52,8 @@ public class PixelmonListener {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = false)
-    public void onMakeEgg(DayCareEvent.PostPokemonAdd event) {
-        UUID playerId = event.getDayCare().getEgg().getOwnerPlayerUUID();
+    public void onMakeEgg(DayCareEvent.PostCollect event) {
+        UUID playerId = event.getPlayer().getUUID();
         dataManager.recordChange(new IDataManager.Key(playerId, Statistic.MADE_EGGS), 1);
     }
 
@@ -56,5 +61,23 @@ public class PixelmonListener {
     public void onHatchEgg(EggHatchEvent event) {
         UUID playerId = event.getPokemon().getOwnerPlayerUUID();
         dataManager.recordChange(new IDataManager.Key(playerId, Statistic.HATCHED_EGGS), 1);
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = false)
+    public void onBattle(BattleEndEvent event) {
+        if (!event.getBattleController().isPvP())
+            return;
+
+        for (Map.Entry<BattleParticipant, BattleResults> result : event.getResults().entrySet()) {
+            if (result.getValue() != BattleResults.VICTORY)
+                continue;
+
+            LivingEntity battleEntity = result.getKey().getEntity();
+            if (battleEntity.getType() != EntityType.PLAYER)
+                continue;
+
+            UUID playerId = battleEntity.getUUID();
+            dataManager.recordChange(new IDataManager.Key(playerId, Statistic.PVP_BATTLES_WON), 1);
+        }
     }
 }
