@@ -86,12 +86,18 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
         writePageControls();
     }
 
+    private boolean isInitialized() {
+        return this.records != null;
+    }
+
     public RankedStatisticsView atPage(int page) {
         this.page = page;
 
-        writeHeader();
-        writeCurrentPage();
-        writePageControls();
+        if (isInitialized()) {
+            writeHeader();
+            writeCurrentPage();
+            writePageControls();
+        }
 
         return this;
     }
