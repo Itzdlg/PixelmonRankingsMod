@@ -87,6 +87,7 @@ public class PlayerStatisticsView extends Inventory implements ActionHandler {
                 ItemStack backHead = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), mod.lang().playerStatisticsView.backwardsItem.head, 1);
                 backHead.setHoverName(wrap(mod.lang().playerStatisticsView.backwardsItem.name));
                 ItemStackUtil.writeLore(backHead, wrap(mod.lang().playerStatisticsView.backwardsItem.lore));
+                ItemStackUtil.writeHideFlags(backHead, ItemStackUtil.ALL_FLAGS);
                 setItem(SLOT_BACK, backHead);
             }
         });
@@ -121,6 +122,7 @@ public class PlayerStatisticsView extends Inventory implements ActionHandler {
                         Placeholder.unparsed("position", ranking + ""),
                         Placeholder.unparsed("total", recordsTotal + ""),
                         Placeholder.unparsed("value", value)));
+                ItemStackUtil.writeHideFlags(itemStack, ItemStackUtil.ALL_FLAGS);
 
                 setItem(position, itemStack);
             });

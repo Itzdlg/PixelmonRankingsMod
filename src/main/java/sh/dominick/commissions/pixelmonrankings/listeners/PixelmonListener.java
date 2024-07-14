@@ -13,6 +13,7 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import sh.dominick.commissions.pixelmonrankings.Statistic;
 import sh.dominick.commissions.pixelmonrankings.data.IDataManager;
+import sh.dominick.commissions.pixelmonrankings.support.arclight.ArcLightSupport;
 
 import java.util.Map;
 import java.util.UUID;
@@ -27,12 +28,17 @@ public class PixelmonListener {
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = false)
     public void onWildPokemonDefeated(BeatWildPixelmonEvent event) {
         UUID playerId = event.player.getUUID();
+        if (ArcLightSupport.hasPermission(playerId, "pixelmonrankings.bypass", false))
+            return;
+
         dataManager.recordChange(new IDataManager.Key(playerId, Statistic.WILD_POKEMON_DEFEATED), 1);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = false)
     public void onPokemonCaptured(CaptureEvent.SuccessfulCapture event) {
         UUID playerId = event.getPlayer().getUUID();
+        if (ArcLightSupport.hasPermission(playerId, "pixelmonrankings.bypass", false))
+            return;
 
         boolean shiny = event.getPokemon().getPokemon().isShiny();
         boolean legendary = event.getPokemon().getPokemon().isLegendary();
@@ -54,12 +60,18 @@ public class PixelmonListener {
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = false)
     public void onMakeEgg(DayCareEvent.PostCollect event) {
         UUID playerId = event.getPlayer().getUUID();
+        if (ArcLightSupport.hasPermission(playerId, "pixelmonrankings.bypass", false))
+            return;
+
         dataManager.recordChange(new IDataManager.Key(playerId, Statistic.MADE_EGGS), 1);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = false)
-    public void onHatchEgg(EggHatchEvent event) {
+    public void onHatchEgg(EggHatchEvent.Post event) {
         UUID playerId = event.getPokemon().getOwnerPlayerUUID();
+        if (ArcLightSupport.hasPermission(playerId, "pixelmonrankings.bypass", false))
+            return;
+
         dataManager.recordChange(new IDataManager.Key(playerId, Statistic.HATCHED_EGGS), 1);
     }
 
@@ -77,6 +89,9 @@ public class PixelmonListener {
                 continue;
 
             UUID playerId = battleEntity.getUUID();
+            if (ArcLightSupport.hasPermission(playerId, "pixelmonrankings.bypass", false))
+                continue;
+
             dataManager.recordChange(new IDataManager.Key(playerId, Statistic.PVP_BATTLES_WON), 1);
         }
     }

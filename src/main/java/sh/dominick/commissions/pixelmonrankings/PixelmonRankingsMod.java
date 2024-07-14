@@ -18,15 +18,22 @@ import sh.dominick.commissions.pixelmonrankings.commands.RankingsCommand;
 import sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsConfig;
 import sh.dominick.commissions.pixelmonrankings.config.PixelmonRankingsLang;
 import sh.dominick.commissions.pixelmonrankings.data.IDataManager;
+import sh.dominick.commissions.pixelmonrankings.data.MySQLDataManager;
 import sh.dominick.commissions.pixelmonrankings.data.SQLiteDataManager;
 import sh.dominick.commissions.pixelmonrankings.data.facade.CachedDataManager;
 import sh.dominick.commissions.pixelmonrankings.listeners.CacheListener;
 import sh.dominick.commissions.pixelmonrankings.listeners.PixelmonListener;
 import sh.dominick.commissions.pixelmonrankings.listeners.PlaytimeListener;
+import sh.dominick.commissions.pixelmonrankings.util.GzipUtil;
+import sh.dominick.commissions.pixelmonrankings.util.TimeUtil;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -66,10 +73,37 @@ public class PixelmonRankingsMod {
             throw new RuntimeException(ex);
         }
 
-        if (!config.database.type.equalsIgnoreCase("sqlite"))
-            throw new IllegalStateException("Only `sqlite` databases are supported.");
+        if (config.database.backup.enabled && config.database.type.equals("sqlite")) {
+            String databaseUrl = config.database.url;
+            String fileUrl = databaseUrl.substring(config.database.url.lastIndexOf(':') + 1);
 
-        dataManager = new SQLiteDataManager(config.database.url, "changes", "profiles");
+            File currentDatabaseFile = new File(fileUrl);
+            String backupFolder = fileUrl + ".backups";
+            File backupFile = new File(backupFolder, TimeUtil.getISODate() + ".db.gz");
+            if (!backupFile.getParentFile().exists())
+                backupFile.getParentFile().mkdirs();
+
+            if (!backupFile.exists()) // Only backup once per day
+                GzipUtil.gzip(currentDatabaseFile, backupFile);
+
+            if (config.database.backup.deleteOld) {
+                // Delete old and then 2 more in case server was offline.
+
+                new ArrayList<LocalDate>() {{
+                    this.add(LocalDate.now().minusDays(config.database.backup.daysOld));
+                    this.add(LocalDate.now().minusDays(config.database.backup.daysOld + 1));
+                    this.add(LocalDate.now().minusDays(config.database.backup.daysOld + 2));
+                }}.stream().map(it -> new File(backupFolder, TimeUtil.getISODate(it) + ".db.gz")).forEach(it -> {
+                    if (it.exists()) it.delete();
+                });
+            }
+        }
+
+        if (config.database.type.equals("sqlite"))
+            dataManager = new SQLiteDataManager(config.database.url, "changes", "profiles");
+        else if (config.database.type.equals("mysql"))
+            dataManager = new MySQLDataManager(config.database.url, "changes", "profiles");
+        else throw new RuntimeException("Illegal option `" + config.database.type + "` for database.type");
 
         if (config.cache.enabled)
             dataManager = new CachedDataManager(dataManager, config.cache.lifetime);

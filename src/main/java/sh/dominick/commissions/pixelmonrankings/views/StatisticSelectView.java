@@ -56,6 +56,7 @@ public class StatisticSelectView extends Inventory implements ActionHandler {
             itemStack.setCount(config.item.amount);
 
             ItemStackUtil.writeLore(itemStack, wrap(config.item.lore));
+            ItemStackUtil.writeHideFlags(itemStack, ItemStackUtil.ALL_FLAGS);
 
             setItem(position, itemStack);
         }

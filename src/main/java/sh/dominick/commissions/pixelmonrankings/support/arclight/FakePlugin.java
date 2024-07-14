@@ -19,9 +19,17 @@ import java.util.logging.Logger;
 public class FakePlugin implements Plugin {
     private final String id;
     private final String name;
-    public FakePlugin(String id, String name) {
+
+    private final Class mainClass;
+    private final FileConfiguration config;
+    private final Logger logger;
+    public FakePlugin(String id, String name, Class mainClass, FileConfiguration config, Logger logger) {
         this.id = id;
         this.name = name;
+
+        this.mainClass = mainClass;
+        this.config = config;
+        this.logger = logger;
     }
 
     @Override
@@ -31,12 +39,12 @@ public class FakePlugin implements Plugin {
 
     @Override
     public PluginDescriptionFile getDescription() {
-        return new PluginDescriptionFile(name, "1.0.0", "");
+        return new PluginDescriptionFile(name, "1.0.0", mainClass.getName());
     }
 
     @Override
     public FileConfiguration getConfig() {
-        return null;
+        return config;
     }
 
     @Override
@@ -111,7 +119,7 @@ public class FakePlugin implements Plugin {
 
     @Override
     public Logger getLogger() {
-        return null;
+        return logger;
     }
 
     @Override

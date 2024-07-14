@@ -12,6 +12,7 @@ import net.minecraft.item.ItemStack;
 import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsMod;
 import sh.dominick.commissions.pixelmonrankings.data.IDataManager;
 import sh.dominick.commissions.pixelmonrankings.data.facade.CachedDataManager;
+import sh.dominick.commissions.pixelmonrankings.support.arclight.ArcLightSupport;
 import sh.dominick.commissions.pixelmonrankings.util.ItemStackUtil;
 import sh.dominick.commissions.pixelmonrankings.util.PlayerHeadUtil;
 import sh.dominick.commissions.pixelmonrankings.util.TimeUtil;
@@ -53,10 +54,12 @@ public class RankingsCommand {
         ItemStack monthlyItem = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), mod.lang().periodSelectView.thisMonthItem.head, 1);
         monthlyItem.setHoverName(wrap(mod.lang().periodSelectView.thisMonthItem.name));
         ItemStackUtil.writeLore(monthlyItem, wrap(mod.lang().periodSelectView.thisMonthItem.lore));
+        ItemStackUtil.writeHideFlags(monthlyItem, ItemStackUtil.ALL_FLAGS);
 
         ItemStack allTimeItem = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), mod.lang().periodSelectView.allTimeItem.head, 1);
         allTimeItem.setHoverName(wrap(mod.lang().periodSelectView.allTimeItem.name));
         ItemStackUtil.writeLore(allTimeItem, wrap(mod.lang().periodSelectView.allTimeItem.lore));
+        ItemStackUtil.writeHideFlags(allTimeItem, ItemStackUtil.ALL_FLAGS);
 
         Set<PeriodSelectView.Period> periods = new HashSet<>(Arrays.asList(
                 new PeriodSelectView.Period(TimeUtil.getStartOfMonth(), TimeUtil.getEndOfMonth(), monthlyItem, 3),
@@ -85,7 +88,7 @@ public class RankingsCommand {
     public int executeFlood(CommandContext<CommandSource> command) throws CommandSyntaxException {
         ServerPlayerEntity player = command.getSource().getPlayerOrException();
         StatisticSelectView.open(mod, player).onSelect((statistic) -> {
-            player.closeContainer();
+            ArcLightSupport.sync(player::closeContainer);
 
             int count = (int) (Math.random() * 1000);
             for (int i = 0; i < count; i++) {

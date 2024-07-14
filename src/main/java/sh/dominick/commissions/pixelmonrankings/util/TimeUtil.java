@@ -1,6 +1,8 @@
 package sh.dominick.commissions.pixelmonrankings.util;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 
 public class TimeUtil {
@@ -44,5 +46,14 @@ public class TimeUtil {
         Calendar c = Calendar.getInstance();
         c.set(Calendar.DAY_OF_MONTH, c.getActualMaximum(Calendar.DAY_OF_MONTH));
         return c.toInstant();
+    }
+
+    public static String getISODate() {
+        return getISODate(LocalDate.now());
+    }
+
+    public static String getISODate(LocalDate date) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("YYYY-MM-dd");
+        return date.format(formatter);
     }
 }

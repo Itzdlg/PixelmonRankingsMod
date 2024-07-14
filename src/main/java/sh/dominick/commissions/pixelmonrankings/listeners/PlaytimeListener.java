@@ -5,6 +5,7 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import sh.dominick.commissions.pixelmonrankings.Statistic;
 import sh.dominick.commissions.pixelmonrankings.data.IDataManager;
+import sh.dominick.commissions.pixelmonrankings.support.arclight.ArcLightSupport;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,6 +29,9 @@ public class PlaytimeListener {
     public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         UUID playerUUID = event.getPlayer().getUUID();
         if (loginTimes.containsKey(playerUUID)) {
+            if (ArcLightSupport.hasPermission(playerUUID, "pixelmonrankings.bypass", false))
+                return;
+
             long loginTimeMillis = loginTimes.get(playerUUID);
             long logoutTimeMillis = System.currentTimeMillis();
             long sessionDurationSeconds = (logoutTimeMillis - loginTimeMillis) / 1000;

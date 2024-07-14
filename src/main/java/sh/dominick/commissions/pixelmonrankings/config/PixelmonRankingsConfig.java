@@ -19,6 +19,14 @@ public class PixelmonRankingsConfig {
             @Setting public boolean enabled = true;
             @Setting public long daysUnprocessed = 3;
         }
+
+        @Setting public BackupConfig backup = new BackupConfig();
+        @ConfigSerializable
+        public static class BackupConfig {
+            @Setting public boolean enabled = true;
+            @Setting public boolean deleteOld = true;
+            @Setting public int daysOld = 3;
+        }
     }
 
     @Setting public CacheConfig cache = new CacheConfig();

@@ -134,6 +134,7 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
                     Placeholder.unparsed("total", recordsTotal + ""),
                     Placeholder.unparsed("value", selfValue)
             ));
+            ItemStackUtil.writeHideFlags(selfHead, ItemStackUtil.ALL_FLAGS);
 
             setItem(SLOT_SELF, selfHead);
         });
@@ -171,6 +172,7 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
                         Placeholder.unparsed("total", recordsTotal + ""),
                         Placeholder.unparsed("value", value)
                 ));
+                ItemStackUtil.writeHideFlags(head, ItemStackUtil.ALL_FLAGS);
 
                 setItem(slot, head);
             });
@@ -184,6 +186,7 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
         ItemStack backwardHead = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), mod.lang().rankedStatisticView.backwardsItem.head, 1);
         backwardHead.setHoverName(wrap(mod.lang().rankedStatisticView.backwardsItem.name));
         ItemStackUtil.writeLore(backwardHead, wrap(mod.lang().rankedStatisticView.backwardsItem.lore));
+        ItemStackUtil.writeHideFlags(backwardHead, ItemStackUtil.ALL_FLAGS);
 
         if (page - 1 >= 0) setItem(SLOT_PAGE_BACKWARD, backwardHead);
         else setItem(SLOT_PAGE_BACKWARD, barrierItem.copy());
@@ -191,6 +194,7 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
         ItemStack forwardHead = PlayerHeadUtil.getPlayerHead(UUID.randomUUID(), mod.lang().rankedStatisticView.forwardsItem.head, 1);
         forwardHead.setHoverName(wrap(mod.lang().rankedStatisticView.forwardsItem.name));
         ItemStackUtil.writeLore(forwardHead, wrap(mod.lang().rankedStatisticView.forwardsItem.lore));
+        ItemStackUtil.writeHideFlags(forwardHead, ItemStackUtil.ALL_FLAGS);
 
         if (page + 1 <= maxPage) setItem(SLOT_PAGE_FORWARD, forwardHead);
         else setItem(SLOT_PAGE_FORWARD, barrierItem.copy());
@@ -216,8 +220,10 @@ public class RankedStatisticsView extends Inventory implements ActionHandler {
 
         if (slot == SLOT_SELF) {
             PlayerStatisticsView.open(mod, self, self.getUUID(), self.getName().getString(), from, to).onBack(() -> {
-                self.closeContainer();
-                RankedStatisticsView.open(mod, self, statistic, from, to).atPage(page);
+                ArcLightSupport.sync(() -> {
+                    self.closeContainer();
+                    RankedStatisticsView.open(mod, self, statistic, from, to).atPage(page);
+                });
             });
 
             return;

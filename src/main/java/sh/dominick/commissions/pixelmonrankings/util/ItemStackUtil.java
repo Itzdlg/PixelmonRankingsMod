@@ -10,6 +10,8 @@ import net.minecraft.util.text.StringTextComponent;
 import java.util.List;
 
 public class ItemStackUtil {
+    public static final int ALL_FLAGS = 255;
+
     private ItemStackUtil() {}
 
     public static void writeLore(ItemStack item, ITextComponent... lines) {
@@ -36,5 +38,11 @@ public class ItemStackUtil {
         }
 
         writeLore(item, arr);
+    }
+
+    public static void writeHideFlags(ItemStack item, int flags) {
+        CompoundNBT tag = item.getOrCreateTag();
+        tag.putInt("HideFlags", flags);
+        item.setTag(tag);
     }
 }
