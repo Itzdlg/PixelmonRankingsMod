@@ -2,9 +2,10 @@ package sh.dominick.commissions.pixelmonrankings.data;
 
 import sh.dominick.commissions.pixelmonrankings.PixelmonRankingsMod;
 import sh.dominick.commissions.pixelmonrankings.Statistic;
+import sh.dominick.commissions.pixelmonrankings.data.pooling.ConnectionSupplier;
+import sh.dominick.commissions.pixelmonrankings.data.pooling.PooledConnectionSupplier;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.sql.*;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -13,6 +14,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public class MySQLDataManager implements IDataManager {
+    private final ConnectionSupplier connectionSupplier;
+
     private final String url;
     private final String changesTableName;
     private final String profilesTableName;
@@ -21,18 +24,16 @@ public class MySQLDataManager implements IDataManager {
         this.url = url;
         this.changesTableName = changesTableName;
         this.profilesTableName = profilesTableName;
-
+        
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
 
+        this.connectionSupplier = new PooledConnectionSupplier(url);
+        
         createTablesIfNotExists();
-    }
-
-    private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(url);
     }
 
     private void createTablesIfNotExists() {
@@ -51,7 +52,7 @@ public class MySQLDataManager implements IDataManager {
                     + "    texture TEXT NOT NULL\n"
                     + ");";
 
-            try (Connection conn = DriverManager.getConnection(url);
+            try (Connection conn = connectionSupplier.getConnection();
                  Statement stmt = conn.createStatement()) {
 
                 stmt.execute(createChangesTableSQL);
@@ -77,7 +78,7 @@ public class MySQLDataManager implements IDataManager {
     public CompletableFuture<Void> recordChange(Key key, double value) {
         return CompletableFuture.runAsync(() -> {
             String query = "INSERT INTO " + changesTableName + " (player, statistic, `change`, timestamp) VALUES (?, ?, ?, ?)";
-            try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            try (Connection conn = connectionSupplier.getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
                 setPlayer(stmt, 1, key.player());
                 stmt.setInt(2, key.statistic().storageId());
                 stmt.setDouble(3, value);
@@ -97,7 +98,7 @@ public class MySQLDataManager implements IDataManager {
                     + (to != null ? " AND timestamp <= ?" : "")
                     + ";";
 
-            try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            try (Connection conn = connectionSupplier.getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
                 setPlayer(stmt, 1, key.player());
                 stmt.setInt(2, key.statistic().storageId());
 
@@ -132,7 +133,7 @@ public class MySQLDataManager implements IDataManager {
 
             List<Entry> sortedEntries = new ArrayList<>();
 
-            try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            try (Connection conn = connectionSupplier.getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
                 stmt.setInt(1, statistic.storageId());
                 int index = 2;
                 if (from != null)
@@ -171,7 +172,7 @@ public class MySQLDataManager implements IDataManager {
                     + " GROUP BY player"
                     + ";";
 
-            try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            try (Connection conn = connectionSupplier.getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
                 stmt.setInt(1, key.statistic().storageId());
 
                 int index = 2;
@@ -201,7 +202,7 @@ public class MySQLDataManager implements IDataManager {
                     + (from != null ? " AND timestamp >= ?" : "")
                     + (to != null ? " AND timestamp <= ?" : "")
                     + ";";
-            try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            try (Connection conn = connectionSupplier.getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
                 stmt.setInt(1, statistic.storageId());
 
                 int index = 2;
@@ -227,7 +228,7 @@ public class MySQLDataManager implements IDataManager {
         return CompletableFuture.runAsync(() -> {
             String sql = "INSERT INTO " + profilesTableName + " (player, playerName, texture) VALUES (?, ?, ?) "
                     + "ON DUPLICATE KEY UPDATE playerName = VALUES(playerName), texture = VALUES(texture)";
-            try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            try (Connection conn = connectionSupplier.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 setPlayer(pstmt, 1, player);
                 pstmt.setString(2, playerName);
                 pstmt.setString(3, texture);
@@ -243,7 +244,7 @@ public class MySQLDataManager implements IDataManager {
     public CompletableFuture<CachedGameProfile> getGameProfile(UUID player) {
         return CompletableFuture.supplyAsync(() -> {
             String query = "SELECT playerName, texture FROM " + profilesTableName + " WHERE player = ?";
-            try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            try (Connection conn = connectionSupplier.getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
                 setPlayer(stmt, 1, player);
 
                 ResultSet rs = stmt.executeQuery();
@@ -268,7 +269,7 @@ public class MySQLDataManager implements IDataManager {
             if (to != null) next = to.toEpochMilli() + 1;
             else next = System.currentTimeMillis() + 1;
 
-            try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            try (Connection conn = connectionSupplier.getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
                 int index = 1;
                 if (from != null)
                     stmt.setLong(index++, from.toEpochMilli());

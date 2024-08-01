@@ -1,6 +1,8 @@
 package sh.dominick.commissions.pixelmonrankings.data;
 
 import sh.dominick.commissions.pixelmonrankings.Statistic;
+import sh.dominick.commissions.pixelmonrankings.data.pooling.ConnectionSupplier;
+import sh.dominick.commissions.pixelmonrankings.data.pooling.SimpleConnectionSupplier;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -12,6 +14,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public class SQLiteDataManager implements IDataManager {
+    private final ConnectionSupplier connectionSupplier;
+    
     private final String url;
     private final String changesTableName;
     private final String profilesTableName;
@@ -27,6 +31,8 @@ public class SQLiteDataManager implements IDataManager {
             throw new RuntimeException(e);
         }
 
+        this.connectionSupplier = new SimpleConnectionSupplier(url);
+        
         createTablesIfNotExists();
     }
 
@@ -45,7 +51,7 @@ public class SQLiteDataManager implements IDataManager {
                 + "    texture TEXT\n"
                 + ");";
 
-        try (Connection conn = DriverManager.getConnection(url);
+        try (Connection conn = connectionSupplier.getConnection();
              Statement stmt = conn.createStatement()) {
 
             stmt.execute(createChangesTableSQL);
@@ -86,7 +92,7 @@ public class SQLiteDataManager implements IDataManager {
             return CompletableFuture.completedFuture(null);
 
         String sql = "INSERT INTO " + changesTableName + "(player, statistic, change, timestamp) VALUES(?,?,?,?)";
-        try (Connection conn = DriverManager.getConnection(url);
+        try (Connection conn = connectionSupplier.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             setPlayer(pstmt, 1, key.player());
@@ -112,7 +118,7 @@ public class SQLiteDataManager implements IDataManager {
             sql += " AND timestamp <= " + to.toEpochMilli();
         }
 
-        try (Connection conn = DriverManager.getConnection(url);
+        try (Connection conn = connectionSupplier.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             setPlayer(pstmt, 1, key.player());
@@ -145,7 +151,7 @@ public class SQLiteDataManager implements IDataManager {
 
         List<Entry> sortedEntries = new ArrayList<>();
 
-        try (Connection conn = DriverManager.getConnection(url);
+        try (Connection conn = connectionSupplier.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setByte(1, statistic.storageId());
@@ -179,7 +185,7 @@ public class SQLiteDataManager implements IDataManager {
 
         sql += " GROUP BY player ORDER BY total_change DESC;";
 
-        try (Connection conn = DriverManager.getConnection(url);
+        try (Connection conn = connectionSupplier.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setByte(1, key.statistic().storageId());
@@ -211,7 +217,7 @@ public class SQLiteDataManager implements IDataManager {
         if (to != null)
             sql += " AND timestamp <= " + to.toEpochMilli();
 
-        try (Connection conn = DriverManager.getConnection(url);
+        try (Connection conn = connectionSupplier.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setByte(1, statistic.storageId());
@@ -231,7 +237,7 @@ public class SQLiteDataManager implements IDataManager {
     @Override
     public CompletableFuture<Void> recordGameProfile(UUID player, String playerName, String texture) {
         String sql = "INSERT OR REPLACE INTO " + profilesTableName + "(player, playerName, texture) VALUES(?,?,?)";
-        try (Connection conn = DriverManager.getConnection(url);
+        try (Connection conn = connectionSupplier.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             setPlayer(pstmt, 1, player);
@@ -249,7 +255,7 @@ public class SQLiteDataManager implements IDataManager {
     @Override
     public CompletableFuture<CachedGameProfile> getGameProfile(UUID player) {
         String sql = "SELECT playerName, texture FROM " + profilesTableName + " WHERE player = ?";
-        try (Connection conn = DriverManager.getConnection(url);
+        try (Connection conn = connectionSupplier.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             setPlayer(pstmt, 1, player);
@@ -284,7 +290,7 @@ public class SQLiteDataManager implements IDataManager {
         if (to != null) next = to.toEpochMilli() + 1;
         else next = System.currentTimeMillis() + 1;
 
-        try (Connection conn = DriverManager.getConnection(url);
+        try (Connection conn = connectionSupplier.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             try (ResultSet rs = pstmt.executeQuery()) {

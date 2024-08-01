@@ -106,6 +106,7 @@ dependencies {
     implementation group: 'org.xerial', name: 'sqlite-jdbc', version: '3.7.2'
     implementation group: 'com.mysql', name: 'mysql-connector-j', version: '9.0.0'
 
+    implementation group: 'com.zaxxer', name: 'HikariCP', version: '4.0.3'
 
     implementation fg.deobf('com.pixelmonmod.pixelmon:Pixelmon-1.16.5-9.1.10-universal:9.1.10')
 
@@ -124,6 +125,8 @@ shadowJar {
 
         include(dependency("org.xerial:sqlite-jdbc"))
         include(dependency("com.mysql:mysql-connector-j"))
+
+        include(dependency("com.zaxxer:HikariCP"))
 
 /*        include(dependency("net.kyori:adventure-api"))
         include(dependency("net.kyori:adventure-text-minimessage"))
